@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Simulacro 4 Niveles: 100 Preguntas de Ciberseguridad</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .police-gradient {
+            background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+        }
+        .danger-gradient {
+            background: linear-gradient(135deg, #7f1d1d 0%, #0f172a 100%);
+        }
+        .option-btn {
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+        }
+        .option-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.5);
+        }
+        .correct {
+            background-color: #166534 !important;
+            border-color: #22c55e !important;
+            color: white !important;
+        }
+        .incorrect {
+            background-color: #991b1b !important;
+            border-color: #ef4444 !important;
+            color: white !important;
+        }
+        .shake {
+            animation: shake 0.5s;
+        }
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- App Container -->
+    <div class="max-w-4xl w-full bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden">
+        
+        <!-- Header -->
+        <div id="game-header" class="police-gradient p-4 sm:p-6 border-b border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-0 transition-all duration-500">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-server text-3xl text-blue-400"></i>
+                <h1 class="text-xl sm:text-2xl font-bold tracking-wider text-white text-center sm:text-left">CIBER<span class="text-blue-400">DEFENSA</span></h1>
+            </div>
+            <div id="game-stats" style="display: none;" class="flex gap-6 text-sm font-semibold">
+                <div class="flex flex-col items-center">
+                    <span class="text-slate-400">NIVEL</span>
+                    <span id="level-display" class="text-xl text-blue-400">1</span>
+                </div>
+                <div class="flex flex-col items-center">
+                    <span class="text-slate-400">PUNTOS</span>
+                    <span id="score-display" class="text-xl text-blue-400">0</span>
+                </div>
+                <div class="flex flex-col items-center">
+                    <span class="text-slate-400">VIDAS</span>
+                    <div id="lives-display" class="text-lg text-red-400 flex gap-1 mt-1 flex-wrap justify-center min-w-[60px]">
+                        <!-- Vidas inyectadas por JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="start-screen" style="display: block;" class="p-6 sm:p-10 text-center">
+            <i class="fa-solid fa-shield-virus text-5xl sm:text-6xl text-slate-500 mb-6"></i>
+            <h2 class="text-2xl sm:text-3xl font-bold mb-4">Simulacro Total: 100 Preguntas</h2>
+            <p class="text-slate-400 mb-8 max-w-lg mx-auto leading-relaxed text-sm sm:text-base">
+                Esta prueba consta de <strong>4 Niveles de 25 preguntas cada uno</strong>. Solo tendrás 3 opciones de respuesta. Dispones de <strong>3 vidas</strong> por nivel, pero ¡cuidado!, al llegar al Nivel 4 entrarás en "Muerte Súbita" y <strong>solo tendrás 1 vida</strong>.
+            </p>
+            <button onclick="iniciarJuego()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-full shadow-lg shadow-blue-500/30 transition transform hover:scale-105 text-lg w-full sm:w-auto">
+                <i class="fa-solid fa-play mr-2"></i> Iniciar Nivel 1
+            </button>
+            <div id="error-log" class="mt-4 text-red-400 text-xs font-mono text-left w-full break-words"></div>
+        </div>
+
+        <!-- Transition Screen -->
+        <div id="transition-screen" style="display: none;" class="p-6 sm:p-10 text-center">
+            <i id="transition-icon" class="fa-solid fa-level-up-alt text-5xl sm:text-6xl text-blue-500 mb-6"></i>
+            <h2 id="transition-title" class="text-2xl sm:text-3xl font-bold mb-4"></h2>
+            <p id="transition-message" class="text-slate-400 mb-8 max-w-lg mx-auto leading-relaxed text-sm sm:text-base"></p>
+            <button onclick="avanzarNivel()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition transform hover:scale-105 text-lg w-full sm:w-auto">
+                <i class="fa-solid fa-forward mr-2"></i> Comenzar Siguiente Nivel
+            </button>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" style="display: none;" class="p-5 sm:p-8">
+            <!-- Progress & Timer -->
+            <div class="flex justify-between items-center mb-4 sm:mb-6">
+                <span id="question-tracker" class="text-slate-400 font-medium text-sm sm:text-base">Pregunta 1 de 25</span>
+                <div class="flex items-center gap-2 bg-slate-700 px-4 py-1.5 rounded-full border border-slate-600">
+                    <i class="fa-regular fa-clock text-blue-400"></i>
+                    <span id="timer-display" class="font-mono font-bold text-lg w-6 text-center">20</span>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="w-full bg-slate-700 rounded-full h-1.5 mb-6 sm:mb-8">
+                <div id="progress-bar" class="bg-blue-500 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+
+            <!-- Question -->
+            <h3 id="question-text" class="text-lg sm:text-xl font-semibold mb-6 sm:mb-8 leading-snug"></h3>
+
+            <!-- Options (3 responses) -->
+            <div id="options-container" class="grid gap-3 mb-6 sm:mb-8">
+                <!-- Options injected via JS -->
+            </div>
+
+            <!-- Feedback Panel -->
+            <div id="feedback-panel" style="display: none;" class="p-4 rounded-xl mb-6 border transition-all">
+                <div class="flex items-start gap-3">
+                    <i id="feedback-icon" class="fa-solid text-xl mt-0.5"></i>
+                    <div>
+                        <h4 id="feedback-title" class="font-bold text-lg mb-1"></h4>
+                        <p id="feedback-rationale" class="text-slate-200 text-sm leading-relaxed"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Next Button -->
+            <div class="text-right">
+                <button id="next-btn" style="display: none;" onclick="siguientePregunta()" class="bg-slate-600 hover:bg-slate-500 text-white font-bold py-3 px-6 rounded-lg transition w-full sm:w-auto">
+                    Siguiente <i class="fa-solid fa-arrow-right ml-1"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- End Screen -->
+        <div id="end-screen" style="display: none;" class="p-6 sm:p-10 text-center">
+            <div id="end-icon" class="text-6xl mb-6"></div>
+            <h2 id="end-title" class="text-2xl sm:text-3xl font-bold mb-2"></h2>
+            <p id="end-subtitle" class="text-lg sm:text-xl text-blue-400 font-semibold mb-6"></p>
+            
+            <div class="bg-slate-700 inline-block px-8 py-4 rounded-2xl mb-8 border border-slate-600">
+                <p class="text-slate-400 text-sm mb-1">PUNTUACIÓN FINAL</p>
+                <p id="final-score" class="text-4xl font-bold text-white"></p>
+            </div>
+
+            <p id="end-message" class="text-slate-300 mb-8 max-w-md mx-auto text-sm sm:text-base"></p>
+
+            <button onclick="reiniciarJuego()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition w-full sm:w-auto">
+                <i class="fa-solid fa-rotate-right mr-2"></i> Repetir Simulacro
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            var log = document.getElementById('error-log');
+            if (log) {
+                log.innerHTML += "<br>Error: " + message + " en linea " + lineno;
+            }
+        };
+
+        // MATRIZ DE 100 PREGUNTAS (4 niveles x 25 preguntas). 3 opciones por pregunta.
+        var nivelesPreguntas = [
+            // NIVEL 1: Conceptos Básicos y Dispositivos (25)
+            [
+                { q: "Cualquier información o sistema que tenga valor para la organización y sea susceptible de ser atacado:", options: ["Activo de información", "Hardware", "Nube"], correct: 0, rationale: "Un activo de información es todo aquello que aporta valor y debe protegerse." },
+                { q: "Modificaciones que se aplican al software para corregir fallos de seguridad o mejorar el rendimiento:", options: ["Backup", "Actualización de seguridad", "Cookie"], correct: 1, rationale: "También conocidas como parches, solucionan vulnerabilidades conocidas." },
+                { q: "Software que se apoya en anuncios (a veces considerado malware) común en aplicaciones gratuitas:", options: ["Ransomware", "Spyware", "Adware"], correct: 2, rationale: "El Adware inunda el dispositivo con publicidad no deseada." },
+                { q: "Programa diseñado para evitar que ejecutemos software malicioso en nuestro equipo:", options: ["Antivirus", "Cortafuegos", "VPN"], correct: 0, rationale: "El antivirus detecta y elimina amenazas en el sistema local." },
+                { q: "Acción mediante la cual demostramos a otra persona o sistema que somos quien decimos ser:", options: ["Autorización", "Autenticación", "Cifrado"], correct: 1, rationale: "La autenticación verifica la identidad (ej. usando una contraseña)." },
+                { q: "Copia de seguridad sobre ficheros o aplicaciones para recuperar datos en caso de pérdida:", options: ["Cloud", "Backup", "Mirroring"], correct: 1, rationale: "El backup es esencial para la resiliencia ante ataques de ransomware." },
+                { q: "Método de reconocimiento basado en características fisiológicas o de comportamiento:", options: ["Biometría", "Criptografía", "Firmas digitales"], correct: 0, rationale: "Usa huellas dactilares, iris o rostro en lugar de contraseñas." },
+                { q: "Tecnología de radio de corto alcance para eliminar cables entre dispositivos:", options: ["NFC", "Bluetooth", "Wi-Fi"], correct: 1, rationale: "Opera en la banda de 2.4 GHz conectando dispositivos a corta distancia." },
+                { q: "Violación de seguridad que ocasiona alteración, pérdida o acceso no autorizado a datos personales:", options: ["Brecha de seguridad", "Phishing", "Escalada de privilegios"], correct: 0, rationale: "Una brecha de datos (Data Breach) expone la confidencialidad." },
+                { q: "Error o fallo en un programa o sistema de software que desencadena un resultado indeseado:", options: ["Bug", "Exploit", "Virus"], correct: 0, rationale: "Un bug es un error de programación, no necesariamente malicioso." },
+                { q: "Política que permite a los empleados usar sus propios dispositivos (móviles, tablets) para trabajar:", options: ["SaaS", "BYOD", "VPN"], correct: 1, rationale: "Bring Your Own Device (BYOD) aumenta la flexibilidad pero también los riesgos." },
+                { q: "Prueba automatizada para diferenciar si el usuario es un ordenador (bot) o un humano:", options: ["Hash", "Token", "Captcha"], correct: 2, rationale: "El Captcha evita ataques automatizados en formularios web." },
+                { q: "Persona que realiza actividades delictivas en la red con fines económicos o destructivos:", options: ["Ciberdelincuente", "Administrador", "Auditor"], correct: 0, rationale: "Ataca sistemas informáticos para lucro o sabotaje." },
+                { q: "Proceso de codificación de información para hacerla ilegible a personas no autorizadas:", options: ["Esteganografía", "Cifrado", "Ofuscación"], correct: 1, rationale: "El cifrado protege la confidencialidad de los datos." },
+                { q: "Paradigma que permite ofrecer servicios y almacenar información a través de Internet:", options: ["Cloud computing", "Intranet", "DMZ"], correct: 0, rationale: "La computación en la nube aloja recursos en servidores de terceros." },
+                { q: "Contraseña asignada por el fabricante de forma masiva (ej. admin/1234):", options: ["Contraseña robusta", "Contraseña predeterminada", "OTP"], correct: 1, rationale: "Es una vulnerabilidad enorme si no se cambia en la configuración inicial." },
+                { q: "Herramientas para evitar que los menores accedan a contenidos inapropiados en internet:", options: ["Filtro anti-spam", "Control parental", "Antivirus"], correct: 1, rationale: "Permite bloquear y auditar la actividad de los menores." },
+                { q: "Pequeño fichero enviado por una web que recaba información sobre los hábitos del usuario:", options: ["Cookie", "Applet", "Plugin"], correct: 0, rationale: "Las cookies almacenan estado y seguimiento en el navegador." },
+                { q: "Correo no solicitado enviado en grandes cantidades con fines publicitarios o maliciosos:", options: ["Spam", "Hoax", "Scam"], correct: 0, rationale: "El correo basura o Spam inunda las bandejas de entrada." },
+                { q: "Sistema que limita y controla el tráfico de red basado en un conjunto de normas:", options: ["Antivirus", "Cortafuegos (Firewall)", "Proxy"], correct: 1, rationale: "El cortafuegos filtra el tráfico entre la red interna e internet." },
+                { q: "Conjunto de datos (como usuario y contraseña) que identifican a un individuo en un sistema:", options: ["Tokens", "Cookies", "Credenciales"], correct: 2, rationale: "Las credenciales son la llave de acceso a nuestras cuentas." },
+                { q: "Información relativa a una persona física viva que la hace identificable:", options: ["Datos anónimos", "Datos personales", "Big Data"], correct: 1, rationale: "Su protección está regulada por leyes como el RGPD." },
+                { q: "Causa de pérdida de información debida a eventos como terremotos o incendios:", options: ["Ciberataque", "Desastre natural", "Brecha lógica"], correct: 1, rationale: "Los planes de contingencia también cubren los desastres naturales." },
+                { q: "Número único que identifica a todo sistema conectado a una red (ej. 192.168.1.1):", options: ["Dirección MAC", "Dirección IP", "URL"], correct: 1, rationale: "La IP es la 'matrícula' lógica del dispositivo en la red." },
+                { q: "Dirección física (48 bits) escrita en el hardware de la tarjeta de red en su fabricación:", options: ["Dirección MAC", "Dirección IP", "SSID"], correct: 0, rationale: "La MAC es un identificador único de hardware a nivel mundial." }
+            ],
+            // NIVEL 2: Ataques y Fraudes (25)
+            [
+                { q: "Malware que cifra los archivos y exige un pago para devolver el acceso:", options: ["Spyware", "Ransomware", "Botnet"], correct: 1, rationale: "Literalmente 'secuestro de datos'. Suelen pedir el pago en criptomonedas." },
+                { q: "Ataque donde se suplantan correos para engañar a un usuario general para que revele datos:", options: ["Phishing", "Spoofing", "DDoS"], correct: 0, rationale: "El Phishing es el fraude más común mediante correos trampa." },
+                { q: "Modalidad de suplantación muy dirigida contra una víctima o directivo específico:", options: ["Spam", "Scareware", "Spear Phishing"], correct: 2, rationale: "El atacante estudia a la víctima ('arpón') para personalizar el engaño." },
+                { q: "Ataque que satura un servidor con peticiones simultáneas desde múltiples equipos infectados:", options: ["DDoS", "XSS", "Inyección SQL"], correct: 0, rationale: "El ataque de Denegación de Servicio Distribuido tumba el acceso a la web." },
+                { q: "Conjunto de ordenadores zombis controlados remotamente por un atacante:", options: ["Intranet", "VLAN", "Botnet"], correct: 2, rationale: "Las botnets obedecen al centro de comando y control (C&C)." },
+                { q: "Malware que se autorreplica e infecta redes enteras sin requerir acción humana:", options: ["Gusano", "Troyano", "Ransomware"], correct: 0, rationale: "A diferencia del virus, el gusano no necesita adherirse a un archivo." },
+                { q: "Malware que se disfraza de programa legítimo para abrir puertas traseras:", options: ["Virus", "Troyano", "Spyware"], correct: 1, rationale: "El troyano engaña al usuario para que lo instale creyendo que es útil." },
+                { q: "Programa diseñado para espiar y enviar datos personales sin consentimiento:", options: ["Spyware", "Adware", "Scam"], correct: 0, rationale: "El Spyware viola la privacidad recopilando información silenciosamente." },
+                { q: "Variante de spyware que registra todas las pulsaciones del teclado:", options: ["Rogueware", "Honeypot", "Keylogger"], correct: 2, rationale: "Ideal para que el atacante capture contraseñas directamente." },
+                { q: "Software que oculta su presencia y otorga permisos de administrador persistentes al atacante:", options: ["Rootkit", "Bug", "Cookie"], correct: 0, rationale: "El rootkit se enraíza profundamente en el sistema operativo." },
+                { q: "Punto débil (o creado a propósito) por el que se accede a un sistema saltando controles:", options: ["Firewall", "Puerta trasera (Backdoor)", "Proxy"], correct: 1, rationale: "Permite el acceso remoto no autorizado al dispositivo." },
+                { q: "Secuencia de comandos que aprovecha una vulnerabilidad para provocar un error o infiltrarse:", options: ["Exploit", "Patch", "Token"], correct: 0, rationale: "El exploit es la 'llave' maliciosa que usa la vulnerabilidad para entrar." },
+                { q: "Vulnerabilidad desconocida por el fabricante, sin parche de seguridad disponible:", options: ["Zero-day", "Ataque pasivo", "Bug público"], correct: 0, rationale: "Al tener cero días de conocimiento, las defensas tradicionales fallan." },
+                { q: "Ataque que inserta comandos en formularios web para acceder ilegítimamente a la base de datos:", options: ["Pharming", "Inyección SQL", "Spoofing"], correct: 1, rationale: "Manipula las sentencias de la BD mediante código malicioso." },
+                { q: "Vulnerabilidad web que inserta scripts maliciosos en el navegador de otros usuarios (Cross-site Scripting):", options: ["XSS", "DDoS", "ARP Spoofing"], correct: 0, rationale: "El XSS ataca a los clientes de la web para robar sus cookies de sesión." },
+                { q: "Ataque que modifica la apariencia visual de una página web (común en hacktivismo):", options: ["Defacement", "Scam", "Baiting"], correct: 0, rationale: "El defacement desfigura la web para mostrar el mensaje del atacante." },
+                { q: "Procedimiento para adivinar una contraseña probando todas las combinaciones posibles:", options: ["Ingeniería inversa", "Fuerza bruta", "Phishing"], correct: 1, rationale: "Automatiza la prueba-error masiva hasta dar con la clave." },
+                { q: "Técnica general para falsear la identidad en la red (ej. falsear la IP o el correo):", options: ["Spoofing", "Sniffing", "Routing"], correct: 0, rationale: "El Spoofing suplanta el origen técnico de la comunicación." },
+                { q: "Ataque en el que alguien intercepta la comunicación entre dos partes para espiar o alterar datos:", options: ["Man-in-the-Middle", "DDoS", "Ping Flood"], correct: 0, rationale: "El 'Hombre en el Medio' lee o modifica los paquetes en tránsito." },
+                { q: "Ataque que altera los servidores DNS para redirigir a una web falsa aunque la URL escrita sea correcta:", options: ["Phishing", "Pharming", "Vishing"], correct: 1, rationale: "El Pharming envenena el DNS, siendo más invisible que el phishing." },
+                { q: "Mensaje falso muy llamativo diseñado para crear confusión y desinformar (Fake News):", options: ["Bulo / Hoax", "Scam", "Spam"], correct: 0, rationale: "Los bulos se difunden masivamente por redes sociales y WhatsApp." },
+                { q: "Estafa por medios electrónicos (ej. ventas de productos falsos):", options: ["Scam", "Spoofing", "Wiper"], correct: 0, rationale: "El Scam es el equivalente digital del timo tradicional." },
+                { q: "Estrategia de engaño psicológico para que el usuario revele datos confidenciales:", options: ["Fuerza bruta", "Criptoanálisis", "Ingeniería social"], correct: 2, rationale: "Se aprovecha del eslabón más débil: el ser humano." },
+                { q: "Phishing realizado a través de mensajes de texto SMS:", options: ["Smishing", "Vishing", "Quishing"], correct: 0, rationale: "SMS + Phishing = Smishing." },
+                { q: "Phishing realizado a través de llamadas telefónicas de voz:", options: ["Smishing", "Quishing", "Vishing"], correct: 2, rationale: "Voice + Phishing = Vishing." }
+            ],
+            // NIVEL 3: Redes y Sistemas Tecnológicos (25)
+            [
+                { q: "Dispositivo que distribuye tráfico de red y conecta nuestra red local (LAN) con Internet:", options: ["Switch", "Hub", "Router"], correct: 2, rationale: "El enrutador decide la ruta de los paquetes entre redes." },
+                { q: "Red de dispositivos inalámbricos interconectados mediante ondas de radio:", options: ["Wi-Fi", "Ethernet", "Fibra Óptica"], correct: 0, rationale: "El Wi-Fi usa el estándar 802.11 para redes sin cables físicos." },
+                { q: "Protocolo antiguo y débil para redes Wi-Fi cuyo uso se desaconseja:", options: ["WPA2", "WEP", "WPA3"], correct: 1, rationale: "Wired Equivalent Privacy (WEP) es extremadamente vulnerable." },
+                { q: "Protocolo seguro para redes Wi-Fi creado para sustituir a WEP:", options: ["WPA", "WPS", "SSID"], correct: 0, rationale: "Wi-Fi Protected Access (WPA/WPA2/WPA3) cifra de forma robusta." },
+                { q: "Mecanismo para conectar dispositivos al Wi-Fi fácilmente, pero que contiene graves fallos de seguridad:", options: ["WPS", "VPN", "MAC"], correct: 0, rationale: "Wi-Fi Protected Setup (WPS) suele permitir ataques de fuerza bruta." },
+                { q: "Tecnología que cifra y establece un túnel seguro a través de una red pública como Internet:", options: ["VLAN", "VPN", "Proxy"], correct: 1, rationale: "La Red Privada Virtual garantiza la confidencialidad de la conexión." },
+                { q: "Zona aislada en la red de una empresa donde se ubican servidores accesibles desde Internet:", options: ["DMZ", "Intranet", "LAN"], correct: 0, rationale: "La Zona Desmilitarizada (DMZ) protege la red interna principal." },
+                { q: "Red informática de pequeña amplitud geográfica (ej. una oficina o vivienda):", options: ["WAN", "LAN", "MAN"], correct: 1, rationale: "La Local Area Network interconecta dispositivos cercanos." },
+                { q: "Red lógica independiente creada mediante software dentro de una red física:", options: ["VLAN", "WLAN", "SAN"], correct: 0, rationale: "La Virtual LAN segmenta el tráfico sin cambiar cables físicos." },
+                { q: "Servicio que traduce nombres de dominio (ej. google.com) en direcciones IP:", options: ["DHCP", "FTP", "DNS"], correct: 2, rationale: "El Domain Name System actúa como la agenda telefónica de Internet." },
+                { q: "Protocolo estándar sin cifrar para la transmisión de páginas web:", options: ["HTTP", "HTTPS", "SMTP"], correct: 0, rationale: "Envía los datos en texto claro, susceptible de interceptación." },
+                { q: "Versión segura del protocolo web que cifra los datos mediante SSL/TLS:", options: ["HTTP", "HTTPS", "FTP"], correct: 1, rationale: "El candado en el navegador indica que los datos viajan cifrados." },
+                { q: "Protocolo clásico utilizado para la transferencia y descarga de ficheros en red:", options: ["FTP", "SMTP", "IMAP"], correct: 0, rationale: "El File Transfer Protocol permite subir/bajar archivos a servidores." },
+                { q: "Familia de protocolos base sobre los cuales funciona todo Internet:", options: ["OSI", "TCP/IP", "IPsec"], correct: 1, rationale: "Garantiza el enrutamiento y la integridad del flujo de datos." },
+                { q: "Comando de diagnóstico que mide la conexión enviando paquetes de solicitud y esperando respuesta:", options: ["Trace", "Ping", "Nmap"], correct: 1, rationale: "Mide el tiempo de respuesta (latencia) entre equipos." },
+                { q: "Técnica usada por atacantes para encontrar servicios abiertos en una máquina:", options: ["Escaneo de puertos", "Defacement", "DNS Spoofing"], correct: 0, rationale: "Rastrea 'puertas' abiertas en el servidor para intentar penetrar." },
+                { q: "Programa que 'escucha' y captura el tráfico de red de forma pasiva (monitorización):", options: ["Exploit", "Sniffer", "Keylogger"], correct: 1, rationale: "Un sniffer puede robar contraseñas si el tráfico no está cifrado." },
+                { q: "Servidor intermediario que centraliza el tráfico hacia Internet ocultando las IPs internas:", options: ["Proxy", "Switch", "Hub"], correct: 0, rationale: "Un proxy hace peticiones en nombre de los ordenadores de la red." },
+                { q: "Dispositivo que traduce protocolos y permite comunicar arquitecturas de red diferentes:", options: ["Puerta de enlace (Gateway)", "Punto de acceso", "Repetidor"], correct: 0, rationale: "Sirve de puente traduciendo información entre redes dispares." },
+                { q: "Técnica de seguridad que divide una red grande en subredes pequeñas para limitar el alcance de un ataque:", options: ["Ofuscación", "Segmentación de red", "Backup"], correct: 1, rationale: "Si infectan una zona, la segmentación evita que salte al resto." },
+                { q: "Mecanismo del cortafuegos que evalúa IPs y puertos para permitir o bloquear el tráfico:", options: ["Filtrado de paquetes", "Hash", "Biometría"], correct: 0, rationale: "Es la función básica de un firewall perimetral." },
+                { q: "Cifrado que utiliza una clave pública y una clave privada (ej. RSA):", options: ["Cifrado simétrico", "Cifrado asimétrico", "Cifrado hash"], correct: 1, rationale: "Resuelve el problema del intercambio seguro de claves." },
+                { q: "Cifrado que utiliza la misma clave tanto para cifrar como para descifrar:", options: ["Cifrado asimétrico", "Cifrado simétrico", "Esteganografía"], correct: 1, rationale: "Es más rápido pero requiere compartir la clave previamente." },
+                { q: "Función matemática que genera un identificador alfanumérico único para garantizar la integridad:", options: ["Hash", "VPN", "Proxy"], correct: 0, rationale: "Un cambio mínimo en el archivo cambia todo el Hash (ej. MD5, SHA)." },
+                { q: "Conjunto de datos electrónicos que garantizan la identidad del emisor y la integridad del documento:", options: ["Firma electrónica", "Certificado SSL", "Sello de confianza"], correct: 0, rationale: "Evita el repudio y asegura que el documento no fue alterado." }
+            ],
+            // NIVEL 4: Gestión, Normativa y Operaciones Avanzadas (25)
+            [
+                { q: "Equipo que realiza ataques simulados en la empresa para encontrar vulnerabilidades:", options: ["Blue Team", "Red Team", "Purple Team"], correct: 1, rationale: "El Equipo Rojo actúa de forma ofensiva (atacante ético)." },
+                { q: "Equipo especializado en monitorizar y defender la red ante ataques reales o simulados:", options: ["Red Team", "Blue Team", "Auditores"], correct: 1, rationale: "El Equipo Azul aplica las contramedidas y parches." },
+                { q: "Equipo de respuesta a incidentes de ciberseguridad (Computer Emergency Response Team):", options: ["SOC", "SIEM", "CERT / CSIRT"], correct: 2, rationale: "Son los bomberos digitales que reaccionan ante la brecha." },
+                { q: "Centro de operaciones de seguridad que analiza incidentes en la empresa:", options: ["SOC", "NOC", "DMZ"], correct: 0, rationale: "El Security Operations Center monitoriza la infraestructura 24/7." },
+                { q: "Software que recopila y analiza eventos de seguridad (logs) en tiempo real:", options: ["IPS", "SIEM", "Antivirus"], correct: 1, rationale: "El Security Information and Event Management correlaciona alertas." },
+                { q: "Sistema que detecta intrusiones pero NO las bloquea automáticamente:", options: ["IDS", "IPS", "Firewall"], correct: 0, rationale: "El Intrusion Detection System solo genera alertas pasivas." },
+                { q: "Sistema que previene y bloquea intrusiones activamente en la red:", options: ["IDS", "IPS", "Proxy"], correct: 1, rationale: "El Intrusion Prevention System corta la conexión maliciosa." },
+                { q: "Sistema trampa (señuelo) para atraer atacantes y estudiar sus movimientos:", options: ["Honeypot", "Sandbox", "VLAN"], correct: 0, rationale: "El 'tarro de miel' distrae al hacker de los sistemas reales." },
+                { q: "Revisión técnica de sistemas para identificar vulnerabilidades (Auditoría):", options: ["Análisis de riesgos", "Auditoría de seguridad", "Gestión de incidentes"], correct: 1, rationale: "Evalúa el cumplimiento y las configuraciones de los activos." },
+                { q: "Ataque controlado ('Prueba de penetración') para determinar el impacto de una brecha:", options: ["Pentest", "BIA", "Fingerprinting"], correct: 0, rationale: "El Pentesting va más allá del escaneo, explotando vulnerabilidades." },
+                { q: "Proceso que evalúa amenazas, vulnerabilidades y el impacto en los activos:", options: ["Análisis de riesgos", "Cadena de custodia", "SLA"], correct: 0, rationale: "Es el paso fundamental antes de aplicar políticas de seguridad." },
+                { q: "Estrategia para restaurar los sistemas críticos de forma ágil tras un desastre:", options: ["Plan de contingencia", "Acuerdo de nivel", "Plan director"], correct: 0, rationale: "Dicta las medidas de emergencia tras el incidente." },
+                { q: "Plan amplio que garantiza que el negocio siga operando ante incidentes graves:", options: ["Plan de continuidad", "Auditoría", "RGPD"], correct: 0, rationale: "El Business Continuity Plan (BCP) abarca aspectos financieros y de comunicación." },
+                { q: "Sistema de Gestión de Seguridad de la Información (basado en la norma ISO 27001):", options: ["SGSI", "LOPD", "PCI DSS"], correct: 0, rationale: "Estructura todos los procesos de ciberseguridad corporativa." },
+                { q: "Documento que establece las directrices de seguridad de información en la empresa:", options: ["SLA", "BIA", "Política de seguridad"], correct: 2, rationale: "Regula qué se puede y no se puede hacer con los activos." },
+                { q: "Acuerdo de Nivel de Servicio entre cliente y proveedor (ej. tiempo de respuesta):", options: ["SLA", "NDA", "SGSI"], correct: 0, rationale: "Service Level Agreement garantiza contractualmente la calidad." },
+                { q: "Ley Orgánica que adapta a España la normativa europea de Protección de Datos:", options: ["LSSI-CE", "LOPDGDD", "PCI DSS"], correct: 1, rationale: "Ley Orgánica de Protección de Datos y Garantía de Derechos Digitales." },
+                { q: "Reglamento europeo que regula el tratamiento de datos personales:", options: ["RGPD", "ISO 27001", "LSSI"], correct: 0, rationale: "El Reglamento General de Protección de Datos entró en vigor en 2018." },
+                { q: "Uso de software o dispositivos por los empleados sin la aprobación de TI:", options: ["Malware", "Shadow IT", "BYOD"], correct: 1, rationale: "Representa un gran riesgo por pérdida de control de datos." },
+                { q: "Modelo que no confía en nadie por defecto, exigiendo validación continua (Confianza Cero):", options: ["Segmentación", "Zero Trust", "VPN"], correct: 1, rationale: "Cambia el enfoque perimetral clásico a validación en cada punto." },
+                { q: "Protocolo legal y técnico para extraer evidencias digitales sin alterarlas:", options: ["Auditoría", "Informática forense", "Cadena de custodia"], correct: 2, rationale: "Garantiza la validez de las pruebas en un juicio." },
+                { q: "Ciencia de adquirir y analizar pruebas digitales tras un ciberataque:", options: ["Informática forense", "Pentesting", "Criptografía"], correct: 0, rationale: "Investiga el sistema para descubrir qué pasó exactamente." },
+                { q: "Ingeniería social donde se engaña a un empleado para que transfiera fondos suplantando a la directiva:", options: ["Pharming", "Defacement", "Fraude del CEO"], correct: 2, rationale: "Busca lucrarse mediante la autoridad simulada del jefe." },
+                { q: "Tipo de ataque muy sigiloso y a largo plazo para espiar a grandes organizaciones:", options: ["APT (Amenaza Persistente Avanzada)", "Ransomware", "DDoS"], correct: 0, rationale: "Suelen estar patrocinados por Estados u organizaciones complejas." },
+                { q: "Capacidad de la empresa para resistir, adaptarse y recuperarse de un ciberataque:", options: ["Redundancia", "Mitigación", "Resiliencia"], correct: 2, rationale: "La resiliencia cibernética es vital para la supervivencia del negocio." }
+            ]
+        ];
+
+        var currentLevel = 1;
+        var currentQuestionIndex = 0;
+        var score = 0;
+        var lives = 3;
+        var maxLives = 3;
+        var timeLeft = 20;
+        var timerInterval;
+        var isAnswering = false;
+
+        function iniciarJuego() {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'none';
+            document.getElementById('game-stats').style.display = 'flex';
+            
+            // Barajar TODAS las preguntas de todos los niveles
+            for (var i = 0; i < nivelesPreguntas.length; i++) {
+                var preguntasNivel = nivelesPreguntas[i];
+                for (var j = preguntasNivel.length - 1; j > 0; j--) {
+                    var k = Math.floor(Math.random() * (j + 1));
+                    var temp = preguntasNivel[j];
+                    preguntasNivel[j] = preguntasNivel[k];
+                    preguntasNivel[k] = temp;
+                }
+            }
+
+            prepararNivel();
+        }
+
+        function prepararNivel() {
+            var header = document.getElementById('game-header');
+            if(currentLevel === 4) {
+                maxLives = 1;
+                header.classList.remove('police-gradient');
+                header.classList.add('danger-gradient');
+            } else {
+                maxLives = 3;
+            }
+            
+            lives = maxLives;
+            currentQuestionIndex = 0;
+            
+            document.getElementById('level-display').textContent = currentLevel;
+            actualizarVidas();
+            
+            document.getElementById('transition-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'block';
+            
+            cargarPregunta();
+        }
+
+        function avanzarNivel() {
+            currentLevel++;
+            prepararNivel();
+        }
+
+        function actualizarVidas() {
+            var display = document.getElementById('lives-display');
+            display.innerHTML = '';
+            for (var i = 0; i < maxLives; i++) {
+                if (i < lives) {
+                    display.innerHTML += '<i class="fa-solid fa-heart"></i>';
+                } else {
+                    display.innerHTML += '<i class="fa-regular fa-heart text-slate-600"></i>';
+                }
+            }
+        }
+
+        function cargarPregunta() {
+            isAnswering = false;
+            timeLeft = 20;
+            var timerDisplay = document.getElementById('timer-display');
+            timerDisplay.textContent = timeLeft;
+            timerDisplay.classList.remove('text-red-500');
+            
+            document.getElementById('feedback-panel').style.display = 'none';
+            document.getElementById('next-btn').style.display = 'none';
+            
+            var optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+
+            var preguntasDelNivel = nivelesPreguntas[currentLevel - 1];
+            var p = preguntasDelNivel[currentQuestionIndex];
+            
+            document.getElementById('question-text').textContent = p.q;
+            document.getElementById('question-tracker').textContent = "Pregunta " + (currentQuestionIndex + 1) + " de " + preguntasDelNivel.length;
+            document.getElementById('progress-bar').style.width = (currentQuestionIndex / preguntasDelNivel.length) * 100 + "%";
+
+            for (var index = 0; index < p.options.length; index++) {
+                (function(idx) {
+                    var btn = document.createElement('button');
+                    btn.className = 'option-btn bg-slate-700 hover:bg-slate-600 text-left px-4 py-4 sm:px-5 rounded-xl border border-slate-600 text-slate-100 font-medium w-full flex items-center justify-between text-sm sm:text-base';
+                    btn.innerHTML = '<span>' + p.options[idx] + '</span> <i class="fa-regular fa-circle text-slate-500 flex-shrink-0 ml-3"></i>';
+                    
+                    btn.onclick = function() {
+                        seleccionarRespuesta(idx, this);
+                    };
+                    
+                    optionsContainer.appendChild(btn);
+                })(index);
+            }
+
+            arrancarTemporizador();
+        }
+
+        function arrancarTemporizador() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(function() {
+                timeLeft--;
+                var timerDisplay = document.getElementById('timer-display');
+                timerDisplay.textContent = timeLeft;
+                
+                if (timeLeft <= 5) {
+                    timerDisplay.classList.add('text-red-500');
+                }
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    gestionarTiempoAgotado();
+                }
+            }, 1000);
+        }
+
+        function gestionarTiempoAgotado() {
+            if (isAnswering) return;
+            isAnswering = true;
+            lives--;
+            actualizarVidas();
+            
+            var p = nivelesPreguntas[currentLevel - 1][currentQuestionIndex];
+            var optionsContainer = document.getElementById('options-container');
+            var buttons = optionsContainer.children;
+            var correctIdx = p.correct;
+            
+            for (var i = 0; i < buttons.length; i++) {
+                buttons[i].disabled = true;
+                buttons[i].classList.add('opacity-75', 'cursor-not-allowed');
+            }
+
+            if(buttons[correctIdx]) {
+                buttons[correctIdx].classList.add('correct', 'opacity-100');
+                buttons[correctIdx].classList.remove('opacity-75', 'bg-slate-700', 'hover:bg-slate-600');
+                buttons[correctIdx].innerHTML = buttons[correctIdx].innerHTML.replace('fa-circle', 'fa-check-circle');
+            }
+
+            mostrarFeedback(false, "¡Tiempo agotado! La velocidad de reacción es clave ante un incidente. " + p.rationale);
+            comprobarProgreso();
+        }
+
+        function seleccionarRespuesta(selectedIndex, btnElement) {
+            if (isAnswering) return;
+            isAnswering = true;
+            clearInterval(timerInterval);
+
+            var p = nivelesPreguntas[currentLevel - 1][currentQuestionIndex];
+            var isCorrect = (selectedIndex === p.correct);
+            
+            var optionsContainer = document.getElementById('options-container');
+            var buttons = optionsContainer.children;
+
+            for (var i = 0; i < buttons.length; i++) {
+                buttons[i].disabled = true;
+                buttons[i].classList.add('opacity-75', 'cursor-not-allowed');
+            }
+
+            if (isCorrect) {
+                score += 10 + timeLeft; // Premia la velocidad
+                document.getElementById('score-display').textContent = score;
+                btnElement.classList.add('correct', 'opacity-100');
+                btnElement.classList.remove('opacity-75', 'bg-slate-700', 'hover:bg-slate-600');
+                btnElement.innerHTML = btnElement.innerHTML.replace('fa-circle', 'fa-check-circle');
+            } else {
+                lives--;
+                actualizarVidas();
+                btnElement.classList.add('incorrect', 'shake', 'opacity-100');
+                btnElement.classList.remove('opacity-75', 'bg-slate-700', 'hover:bg-slate-600');
+                btnElement.innerHTML = btnElement.innerHTML.replace('fa-circle', 'fa-times-circle');
+                
+                if(buttons[p.correct]) {
+                    buttons[p.correct].classList.add('correct', 'opacity-100');
+                    buttons[p.correct].classList.remove('opacity-75', 'bg-slate-700', 'hover:bg-slate-600');
+                    buttons[p.correct].innerHTML = buttons[p.correct].innerHTML.replace('fa-circle', 'fa-check-circle');
+                }
+            }
+
+            mostrarFeedback(isCorrect, p.rationale);
+            comprobarProgreso();
+        }
+
+        function mostrarFeedback(isCorrect, text) {
+            var panel = document.getElementById('feedback-panel');
+            var icon = document.getElementById('feedback-icon');
+            var title = document.getElementById('feedback-title');
+            var rationale = document.getElementById('feedback-rationale');
+
+            panel.className = 'p-4 rounded-xl mb-6 border transition-all';
+            panel.style.display = 'block';
+            icon.className = 'fa-solid text-xl sm:text-2xl mt-1 ';
+            
+            if (isCorrect) {
+                panel.classList.add('bg-green-900/30', 'border-green-700');
+                icon.classList.add('fa-circle-check', 'text-green-400');
+                title.textContent = '¡Correcto!';
+                title.className = 'font-bold text-lg mb-1 text-green-400';
+            } else {
+                panel.classList.add('bg-red-900/30', 'border-red-700');
+                icon.classList.add('fa-triangle-exclamation', 'text-red-400');
+                title.textContent = 'Incorrecto';
+                title.className = 'font-bold text-lg mb-1 text-red-400';
+            }
+            
+            rationale.textContent = text;
+            
+            if (lives > 0) {
+                var nextBtn = document.getElementById('next-btn');
+                nextBtn.style.display = 'inline-block';
+                if(currentQuestionIndex >= 24 && currentLevel === 4) {
+                     nextBtn.textContent = "Ver Resultados Finales";
+                     nextBtn.classList.add('bg-blue-600');
+                } else if (currentQuestionIndex >= 24) {
+                     nextBtn.textContent = "Completar Nivel";
+                     nextBtn.classList.add('bg-blue-600');
+                }
+            }
+        }
+
+        function comprobarProgreso() {
+            if (lives <= 0) {
+                setTimeout(function() {
+                    finalizarJuego(false);
+                }, 2500);
+            }
+        }
+
+        function siguientePregunta() {
+            currentQuestionIndex++;
+            var preguntasDelNivel = nivelesPreguntas[currentLevel - 1];
+
+            if (currentQuestionIndex < preguntasDelNivel.length) {
+                cargarPregunta();
+            } else {
+                if (currentLevel < 4) {
+                    mostrarPantallaTransicion();
+                } else {
+                    finalizarJuego(true);
+                }
+            }
+        }
+
+        function mostrarPantallaTransicion() {
+            document.getElementById('game-screen').style.display = 'none';
+            var transitionScreen = document.getElementById('transition-screen');
+            transitionScreen.style.display = 'block';
+            
+            var title = document.getElementById('transition-title');
+            var msg = document.getElementById('transition-message');
+            var icon = document.getElementById('transition-icon');
+            
+            title.textContent = "¡Nivel " + currentLevel + " Superado!";
+            
+            if(currentLevel === 1) {
+                msg.textContent = "Excelente base técnica. Ahora pasamos a la acción: prepárate para identificar los ataques y fraudes más comunes. ¡Recuerdas, recuperas tus 3 vidas!";
+            } else if (currentLevel === 2) {
+                msg.textContent = "Bien defendido. Has mitigado las amenazas. En el Nivel 3 nos centraremos en la infraestructura, redes y comunicaciones.";
+            } else if (currentLevel === 3) {
+                icon.className = 'fa-solid fa-skull text-5xl sm:text-6xl text-red-500 mb-6';
+                title.className = "text-2xl sm:text-3xl font-bold mb-4 text-red-500";
+                msg.innerHTML = "¡CUIDADO! Entras en el nivel final de Gestión y Operaciones Avanzadas. <strong>MUERTE SÚBITA: SOLO TIENES 1 VIDA.</strong> Un error y se acabó el simulacro.";
+            }
+        }
+
+        function finalizarJuego(completado) {
+            document.getElementById('game-screen').style.display = 'none';
+            document.getElementById('transition-screen').style.display = 'none';
+            document.getElementById('game-stats').style.display = 'none';
+            document.getElementById('end-screen').style.display = 'block';
+
+            document.getElementById('final-score').textContent = score;
+            var endIcon = document.getElementById('end-icon');
+            var endTitle = document.getElementById('end-title');
+            var endSubtitle = document.getElementById('end-subtitle');
+            var endMsg = document.getElementById('end-message');
+
+            var rank = "";
+            if (!completado) {
+                rank = "Sistema Comprometido (Nivel " + currentLevel + ")";
+                endIcon.innerHTML = '<i class="fa-solid fa-server text-red-500"></i>';
+                endTitle.textContent = "¡Has perdido todas las vidas!";
+                endTitle.className = "text-3xl font-bold mb-2 text-red-400";
+                endMsg.textContent = "Los ciberdelincuentes han logrado acceder a la red. Caíste en el Nivel " + currentLevel + ". Revisa el glosario e inténtalo de nuevo para lograr superar las 100 preguntas.";
+            } else if (score < 1500) {
+                rank = "Técnico Junior";
+                endIcon.innerHTML = '<i class="fa-solid fa-laptop-code text-slate-500"></i>';
+                endTitle.textContent = "¡Superaste el reto!";
+                endTitle.className = "text-3xl font-bold mb-2 text-slate-300";
+                endMsg.textContent = "Lograste acabar las 100 preguntas, resistiendo la Muerte Súbita, pero la puntuación de velocidad fue baja. ¡Aun así, es un logro!";
+            } else if (score < 2500) {
+                rank = "Analista de Seguridad (SOC)";
+                endIcon.innerHTML = '<i class="fa-solid fa-shield-cat text-blue-400"></i>';
+                endTitle.textContent = "¡Magnífico trabajo defensivo!";
+                endTitle.className = "text-3xl font-bold mb-2 text-blue-400";
+                endMsg.textContent = "Controlas muy bien las amenazas. Aguantar 100 preguntas bajo presión no es fácil. Tienes la madera de un gran analista.";
+            } else {
+                rank = "CISO (Jefe de Ciberseguridad)";
+                endIcon.innerHTML = '<i class="fa-solid fa-user-ninja text-yellow-500"></i>';
+                endTitle.textContent = "¡Seguridad Impecable y Rápida!";
+                endTitle.className = "text-3xl font-bold mb-2 text-yellow-500";
+                endMsg.textContent = "Un conocimiento y velocidad magistrales a lo largo de las 100 preguntas. ¡La infraestructura corporativa está en las mejores manos posibles!";
+            }
+
+            endSubtitle.textContent = "Rango Obtenido: " + rank;
+        }
+
+        function reiniciarJuego() {
+            location.reload();
+        }
+    </script>
+</body>
+</html>
